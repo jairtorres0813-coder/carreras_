@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control de Carreras</title>
+
+<style>
+:root{
+  --bg:#0f172a; --card:#1e293b; --pri:#0ea5e9;
+  --txt:#e5e7eb; --mut:#94a3b8;
+}
+body{
+  margin:0;
+  font-family:system-ui;
+  color:var(--txt);
+
+  /* 🔹 Fondo con imagen estética */
+  background-image: url('https://wallpapercave.com/wp/wp9119442.jpg'); 
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+
+  /* 🔹 Centrado con Flexbox para login */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+body::before {
+  content:"";
+  position:fixed;
+  top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.6);
+  z-index:-1;
+}
+
+.container{max-width:1000px;margin:auto}
+.card{
+  background:var(--card);padding:20px;border-radius:16px;
+  margin-bottom:20px;
+}
+h2,h3{text-align:center;margin-bottom:15px}
+input,button,select{
+  width:100%;padding:14px;margin-bottom:12px;
+  border-radius:12px;border:none;font-size:16px;
+}
+input,select{background:#0d1324;color:white}
+button{
+  background:var(--pri);color:white;
+  font-weight:700;cursor:pointer
+}
+.list-item{
+  border-bottom:1px solid #334155;padding:12px 0
+}
+.meta{font-size:13px;color:var(--mut)}
+.oculto{display:none}
+
+/* 🔹 Login blanco */
+#login {
+  background: white;
+  color: black;
+}
+#login input {
+  background: #f3f4f6;
+  color: black;
+}
+#login button {
+  background: black;
+  color: white;
+  font-weight: 700;
+}
+
+/* 🔹 Layout en columnas */
+.layout {
+  display: flex;
+  gap: 20px;
+}
+.col {
+  flex: 1;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h2>🚖 Mi Diario</h2>
+
+<!-- 🔹 Pantalla de Login -->
+<div id="login" class="card">
+  <h3>Iniciar Sesión</h3>
+  <form id="loginForm">
+    <input id="usuario" placeholder="Usuario" required>
+    <input id="clave" type="password" placeholder="Contraseña" required>
+    <button>Entrar</button>
+  </form>
+</div>
+
+<!-- 🔹 Pantalla principal -->
+<div id="app" class="oculto">
+  <div class="layout">
+    <!-- Columna izquierda: Nueva carrera -->
+    <div class="col">
+      <div class="card">
+        <h3>Nueva Carrera</h3>
+        <form id="form">
+          <input id="valor" type="number" placeholder="Valor ($)" required>
+          <input id="cliente" placeholder="Nombre del cliente">
+          <input id="origen" placeholder="Origen">
+          <input id="destino" placeholder="Destino">
+          <select id="metodo">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="digital">📱 Nequi / Daviplata</option>
+          </select>
+          <button>Registrar (+)</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Columna derecha: Historial -->
+    <div class="col">
+      <div class="card">
+        <h3>Historial</h3>
+        <div id="lista"></div>
+        <h3>Total: <span id="total">$0</span></h3>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+/* 🔹 Login */
+const loginForm = document.getElementById('loginForm');
+const loginDiv = document.getElementById('login');
+const appDiv = document.getElementById('app');
+
+loginForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  const usuario = document.getElementById('usuario').value;
+  const clave = document.getElementById('clave').value;
+
+  if(usuario === "admin" && clave === "1234"){
+    loginDiv.classList.add('oculto');
+    appDiv.classList.remove('oculto');
+    document.body.style.display = "block"; // quita el centrado al entrar
+  } else {
+    alert("Usuario o contraseña incorrectos");
+  }
+});
+
+/* 🔹 Registro de carreras */
+const form = document.getElementById('form');
+const lista = document.getElementById('lista');
+const totalSpan = document.getElementById('total');
+const campos = ['valor','cliente','origen','destino','metodo'];
+
+let carreras = JSON.parse(localStorage.getItem('carreras')) || [];
+let borrador = JSON.parse(localStorage.getItem('borrador')) || {};
+
+campos.forEach(id=>{
+  if(borrador[id]) document.getElementById(id).value = borrador[id];
+  document.getElementById(id).addEventListener('input',()=>{
+    borrador[id] = document.getElementById(id).value;
+    localStorage.setItem('borrador',JSON.stringify(borrador));
+  });
+});
+
+function calcularTotal(){
+  let suma = carreras.reduce((acc,c)=> acc + Number(c.valor), 0);
+  totalSpan.textContent = "$" + suma;
+}
+
+function render(){
+  lista.innerHTML='';
+  if(!carreras.length){
+    lista.innerHTML='<p style="text-align:center;color:#94a3b8">Sin registros</p>';
+    totalSpan.textContent = "$0";
+    return;
+  }
+  carreras.slice().reverse().forEach(c=>{
+    lista.innerHTML+=`
+    <div class="list-item">
+      <b>$${c.valor}</b>
+      <div class="meta">
+        👤 ${c.cliente||'Sin nombre'} • ${c.hora}<br>
+        ${c.origen||'?'} ➝ ${c.destino||'?'} • ${c.metodo}
+      </div>
+    </div>`;
+  });
+  calcularTotal();
+}
+
+form.addEventListener('submit',e=>{
+  e.preventDefault();
+  carreras.push({
+    valor: valor.value,
+    cliente: cliente.value,
+    origen: origen.value,
+    destino: destino.value,
+    metodo: metodo.value,
+    hora: new Date().toLocaleTimeString([],{
+      hour:'2-digit',minute:'2-digit'
+    })
+  });
+  localStorage.setItem('carreras',JSON.stringify(carreras));
+  localStorage.removeItem('borrador');
+  borrador = {};
+  form.reset();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
